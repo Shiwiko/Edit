@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resize Express - Sans Login</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input, button { width: 100%; margin: 10px 0; padding: 10px; border-radius: 5px; border: none; }
+        input[type="file"] { background: #333; color: white; }
+        button { background: #5865F2; color: white; font-weight: bold; cursor: pointer; }
+        button:hover { background: #4752c4; }
+        canvas { display: none; }
+        .preview { text-align: center; margin-top: 10px; font-size: 0.9em; color: #bbb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🖼️ Redimensionner Image</h2>
+    <p class="preview">Traitement local (ton fichier ne quitte pas ton PC)</p>
+    
+    <input type="file" id="upload" accept="image/*">
+    <label>Largeur (px) :</label>
+    <input type="number" id="width" value="800">
+    
+    <button onclick="resizeImage()">Télécharger l'image redimensionnée</button>
+    
+    <hr style="border: 0.5px solid #333; margin: 20px 0;">
+
+    <h2>🎥 Vidéo (Aspect Ratio)</h2>
+    <p class="preview">Pour la vidéo, sans installation lourde, on change l'affichage (CSS) ou on utilise les outils natifs.</p>
+    <input type="file" id="videoUpload" accept="video/*">
+    <button onclick="processVideo()">Visualiser la vidéo</button>
+    <div id="videoContainer"></div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    function resizeImage() {
+        const file = document.getElementById('upload').files[0];
+        const targetWidth = document.getElementById('width').value;
+        
+        if (!file) return alert("Choisis une image !");
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(event) {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = function() {
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Calcul du ratio pour ne pas déformer
+                const scaleFactor = targetWidth / img.width;
+                canvas.width = targetWidth;
+                canvas.height = img.height * scaleFactor;
+
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Création du lien de téléchargement
+                const link = document.createElement('a');
+                link.download = 'resized-image.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+        }
+    }
+
+    function processVideo() {
+        const file = document.getElementById('videoUpload').files[0];
+        if (!file) return alert("Choisis une vidéo !");
+        
+        const url = URL.createObjectURL(file);
+        const container = document.getElementById('videoContainer');
+        container.innerHTML = `<video src="${url}" controls style="width:100%; border-radius:5px; margin-top:10px;"></video>`;
+    }
+</script>
+
+</body>
+</html>
