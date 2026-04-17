@@ -3,99 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resize Express - Image, Vidéo & GIF</title>
+    <title>Resize & Download - Shiwiko</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { max-width: 600px; width: 100%; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h2 { border-bottom: 2px solid #5865F2; padding-bottom: 10px; font-size: 1.2rem; }
-        input, button { width: 100%; margin: 10px 0; padding: 12px; border-radius: 6px; border: none; box-sizing: border-box; }
-        input[type="file"] { background: #333; color: white; cursor: pointer; }
-        input[type="number"] { background: #444; color: white; }
-        button { background: #5865F2; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #4752c4; transform: translateY(-2px); }
-        .preview-area { text-align: center; margin-top: 15px; border: 2px dashed #444; padding: 10px; border-radius: 8px; min-height: 50px; }
-        img, video { max-width: 100%; height: auto; border-radius: 4px; }
-        .info { font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 500px; width: 100%; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+        h2 { color: #5865F2; font-size: 1.1rem; margin-top: 25px; }
+        input, button { width: 100%; margin: 8px 0; padding: 12px; border-radius: 8px; border: none; box-sizing: border-box; }
+        input[type="file"] { background: #333; color: white; }
+        button { background: #5865F2; color: white; font-weight: bold; cursor: pointer; }
+        button.dl { background: #2ecc71; margin-top: 5px; }
+        .preview-box { border: 2px dashed #444; padding: 10px; margin-top: 10px; text-align: center; border-radius: 8px; overflow: hidden;}
+        img, video { max-width: 100%; height: auto; }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🖼️ Images (PNG, JPG, WEBP)</h2>
-    <p class="info">Redimensionne et télécharge le fichier.</p>
-    <input type="file" id="upload" accept="image/png, image/jpeg, image/webp">
-    <input type="number" id="width" placeholder="Largeur (ex: 500)">
-    <button onclick="resizeImage()">Redimensionner & Télécharger</button>
+    <h1>✂️ Editor Pro</h1>
 
-    <h2>✨ GIF Animés</h2>
-    <p class="info">Ajuste la taille d'affichage de ton GIF.</p>
-    <input type="file" id="gifUpload" accept="image/gif">
-    <input type="number" id="gifWidth" placeholder="Largeur d'affichage (ex: 300)">
-    <button onclick="processGif()">Appliquer la taille</button>
-    <div id="gifPreview" class="preview-area">Aucun GIF sélectionné</div>
+    <h2>🖼️ Image (JPG/PNG)</h2>
+    <input type="file" id="imgInp" accept="image/*">
+    <input type="number" id="imgW" placeholder="Largeur en px">
+    <button onclick="resImg()">Télécharger Image</button>
 
-    <h2>🎥 Vidéos</h2>
-    <p class="info">Prévisualisation avec redimensionnement CSS.</p>
-    <input type="file" id="videoUpload" accept="video/*">
-    <button onclick="processVideo()">Charger la Vidéo</button>
-    <div id="videoPreview" class="preview-area">Aucune vidéo sélectionnée</div>
+    <h2>✨ GIF Animé</h2>
+    <input type="file" id="gifInp" accept="image/gif">
+    <input type="number" id="gifW" placeholder="Largeur en px">
+    <button onclick="viewGif()">Voir le GIF</button>
+    <div id="gifBox" class="preview-box">Aperçu GIF</div>
+    <p style="font-size: 0.7rem; color: #888;">Note : Pour enregistrer un GIF redimensionné, fais "Clic droit > Enregistrer sous" sur l'aperçu après modification.</p>
+
+    <h2>🎥 Vidéo</h2>
+    <input type="file" id="vidInp" accept="video/*">
+    <button onclick="viewVid()">Charger Vidéo</button>
+    <div id="vidBox" class="preview-box">Aperçu Vidéo</div>
 </div>
 
 <canvas id="canvas"></canvas>
 
 <script>
-    // --- LOGIQUE IMAGE ---
-    function resizeImage() {
-        const file = document.getElementById('upload').files[0];
-        const targetWidth = document.getElementById('width').value;
-        if (!file || !targetWidth) return alert("Choisis une image et une largeur !");
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.src = e.target.result;
-            img.onload = () => {
-                const canvas = document.getElementById('canvas');
-                const ctx = canvas.getContext('2d');
-                const scale = targetWidth / img.width;
-                canvas.width = targetWidth;
-                canvas.height = img.height * scale;
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                const link = document.createElement('a');
-                link.download = 'image-resized.png';
-                link.href = canvas.toDataURL();
-                link.click();
+    // Logic Image
+    function resImg() {
+        const file = document.getElementById('imgInp').files[0];
+        const w = document.getElementById('imgW').value;
+        if(!file || !w) return alert("Remplis tout !");
+        const r = new FileReader();
+        r.onload = (e) => {
+            const i = new Image();
+            i.src = e.target.result;
+            i.onload = () => {
+                const c = document.getElementById('canvas');
+                const ctx = c.getContext('2d');
+                c.width = w;
+                c.height = i.height * (w / i.width);
+                ctx.drawImage(i, 0, 0, c.width, c.height);
+                const l = document.createElement('a');
+                l.download = 'shiwiko-resize.png';
+                l.href = c.toDataURL();
+                l.click();
             };
         };
-        reader.readAsDataURL(file);
+        r.readAsDataURL(file);
     }
 
-    // --- LOGIQUE GIF ---
-    function processGif() {
-        const file = document.getElementById('gifUpload').files[0];
-        const width = document.getElementById('gifWidth').value || '100%';
-        const preview = document.getElementById('gifPreview');
-
-        if (!file) return alert("Choisis un GIF !");
-        
+    // Logic GIF
+    function viewGif() {
+        const file = document.getElementById('gifInp').files[0];
+        const w = document.getElementById('gifW').value || 300;
+        const box = document.getElementById('gifBox');
+        if(!file) return;
         const url = URL.createObjectURL(file);
-        preview.innerHTML = `<img src="${url}" style="width: ${width}px !important;">`;
-        // Note: Pour télécharger un GIF redimensionné (les frames), il faudrait une librairie comme gif.js.
-        // Ici, on gère le redimensionnement visuel parfait pour l'intégration Discord par exemple.
+        box.innerHTML = `<img src="${url}" style="width:${w}px">`;
     }
 
-    // --- LOGIQUE VIDÉO ---
-    function processVideo() {
-        const file = document.getElementById('videoUpload').files[0];
-        const preview = document.getElementById('videoPreview');
-        if (!file) return alert("Choisis une vidéo !");
-        
+    // Logic Video
+    function viewVid() {
+        const file = document.getElementById('vidInp').files[0];
+        const box = document.getElementById('vidBox');
+        if(!file) return;
         const url = URL.createObjectURL(file);
-        preview.innerHTML = `<video src="${url}" controls></video>`;
+        box.innerHTML = `<video src="${url}" controls style="width:100%"></video>`;
     }
 </script>
-
 </body>
 </html>
