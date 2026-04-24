@@ -3,88 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resize & Download - Shiwiko</title>
+    <title>Téléchargeur de Dossier</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { max-width: 500px; width: 100%; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        h2 { color: #5865F2; font-size: 1.1rem; margin-top: 25px; }
-        input, button { width: 100%; margin: 8px 0; padding: 12px; border-radius: 8px; border: none; box-sizing: border-box; }
-        input[type="file"] { background: #333; color: white; }
-        button { background: #5865F2; color: white; font-weight: bold; cursor: pointer; }
-        button.dl { background: #2ecc71; margin-top: 5px; }
-        .preview-box { border: 2px dashed #444; padding: 10px; margin-top: 10px; text-align: center; border-radius: 8px; overflow: hidden;}
-        img, video { max-width: 100%; height: auto; }
-        canvas { display: none; }
+        body { font-family: sans-serif; background: #0d1117; color: white; text-align: center; padding: 50px; }
+        .container { background: #161b22; padding: 20px; border-radius: 10px; display: inline-block; }
+        input { padding: 10px; width: 80%; margin: 10px 0; border-radius: 5px; border: none; }
+        button { background: #238636; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #1b4721; }
+        #status { margin-top: 15px; color: #8b949e; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>✂️ Editor Pro</h1>
+    <div class="container">
+        <h1>📦 Créateur de Dossier ZIP</h1>
+        <p>Colle les liens des fichiers (un par ligne) :</p>
+        <textarea id="links" rows="10" style="width: 100%; border-radius: 5px;"></textarea>
+        <br>
+        <button id="downloadBtn">Générer le Dossier (.zip)</button>
+        <div id="status"></div>
+    </div>
 
-    <h2>🖼️ Image (JPG/PNG)</h2>
-    <input type="file" id="imgInp" accept="image/*">
-    <input type="number" id="imgW" placeholder="Largeur en px">
-    <button onclick="resImg()">Télécharger Image</button>
+    <script>
+        document.getElementById('downloadBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('downloadBtn');
+            const status = document.getElementById('status');
+            const links = document.getElementById('links').value.split('\n').filter(l => l.trim() !== '');
+            
+            if (links.length === 0) return alert("Ajoute au moins un lien !");
 
-    <h2>✨ GIF Animé</h2>
-    <input type="file" id="gifInp" accept="image/gif">
-    <input type="number" id="gifW" placeholder="Largeur en px">
-    <button onclick="viewGif()">Voir le GIF</button>
-    <div id="gifBox" class="preview-box">Aperçu GIF</div>
-    <p style="font-size: 0.7rem; color: #888;">Note : Pour enregistrer un GIF redimensionné, fais "Clic droit > Enregistrer sous" sur l'aperçu après modification.</p>
+            btn.disabled = true;
+            status.innerText = "Préparation du dossier...";
+            const zip = new JSZip();
 
-    <h2>🎥 Vidéo</h2>
-    <input type="file" id="vidInp" accept="video/*">
-    <button onclick="viewVid()">Charger Vidéo</button>
-    <div id="vidBox" class="preview-box">Aperçu Vidéo</div>
-</div>
+            try {
+                for (let i = 0; i < links.length; i++) {
+                    const url = links[i].trim();
+                    status.innerText = `Téléchargement du fichier ${i + 1}/${links.length}...`;
+                    
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    
+                    // On extrait le nom du fichier depuis l'URL
+                    const fileName = url.split('/').pop() || `fichier_${i+1}`;
+                    zip.file(fileName, blob);
+                }
 
-<canvas id="canvas"></canvas>
+                status.innerText = "Compression en cours...";
+                const content = await zip.generateAsync({ type: "blob" });
+                
+                // Création du lien de téléchargement
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(content);
+                link.download = "Mon_Dossier.zip";
+                link.click();
 
-<script>
-    // Logic Image
-    function resImg() {
-        const file = document.getElementById('imgInp').files[0];
-        const w = document.getElementById('imgW').value;
-        if(!file || !w) return alert("Remplis tout !");
-        const r = new FileReader();
-        r.onload = (e) => {
-            const i = new Image();
-            i.src = e.target.result;
-            i.onload = () => {
-                const c = document.getElementById('canvas');
-                const ctx = c.getContext('2d');
-                c.width = w;
-                c.height = i.height * (w / i.width);
-                ctx.drawImage(i, 0, 0, c.width, c.height);
-                const l = document.createElement('a');
-                l.download = 'shiwiko-resize.png';
-                l.href = c.toDataURL();
-                l.click();
-            };
-        };
-        r.readAsDataURL(file);
-    }
-
-    // Logic GIF
-    function viewGif() {
-        const file = document.getElementById('gifInp').files[0];
-        const w = document.getElementById('gifW').value || 300;
-        const box = document.getElementById('gifBox');
-        if(!file) return;
-        const url = URL.createObjectURL(file);
-        box.innerHTML = `<img src="${url}" style="width:${w}px">`;
-    }
-
-    // Logic Video
-    function viewVid() {
-        const file = document.getElementById('vidInp').files[0];
-        const box = document.getElementById('vidBox');
-        if(!file) return;
-        const url = URL.createObjectURL(file);
-        box.innerHTML = `<video src="${url}" controls style="width:100%"></video>`;
-    }
-</script>
+                status.innerText = "✅ Terminé !";
+            } catch (err) {
+                console.error(err);
+                status.innerText = "❌ Erreur (vérifie les liens ou les droits CORS)";
+            }
+            btn.disabled = false;
+        });
+    </script>
 </body>
 </html>
