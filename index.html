@@ -3,68 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Téléchargeur de Dossier</title>
+    <title>Créateur de Dossier ZIP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0d1117; color: white; text-align: center; padding: 50px; }
-        .container { background: #161b22; padding: 20px; border-radius: 10px; display: inline-block; }
-        input { padding: 10px; width: 80%; margin: 10px 0; border-radius: 5px; border: none; }
-        button { background: #238636; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #1b4721; }
-        #status { margin-top: 15px; color: #8b949e; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0d1117; color: white; text-align: center; padding: 20px; }
+        .container { background: #161b22; padding: 30px; border-radius: 15px; border: 1px solid #30363d; display: inline-block; max-width: 90%; }
+        h1 { color: #58a6ff; }
+        .upload-area { border: 2px dashed #30363d; padding: 30px; margin: 20px 0; border-radius: 10px; cursor: pointer; transition: 0.3s; }
+        .upload-area:hover { border-color: #58a6ff; background: #1c2128; }
+        input[type="file"] { display: none; }
+        .btn-select { background: #21262d; color: #c9d1d9; padding: 10px 20px; border: 1px solid #f0f6fc1a; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 10px; display: inline-block; }
+        #downloadBtn { background: #238636; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px; font-size: 16px; }
+        #downloadBtn:disabled { background: #1b4721; color: #8b949e; cursor: not-allowed; }
+        #fileCount { margin-top: 10px; color: #8b949e; font-size: 14px; }
+        #status { margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>📦 Créateur de Dossier ZIP</h1>
-        <p>Colle les liens des fichiers (un par ligne) :</p>
-        <textarea id="links" rows="10" style="width: 100%; border-radius: 5px;"></textarea>
-        <br>
-        <button id="downloadBtn">Générer le Dossier (.zip)</button>
+        <h1>📦 Pack Express</h1>
+        <p>Transforme tes photos en un seul dossier ZIP</p>
+
+        <label for="fileInput" class="upload-area" id="dropZone">
+            <span class="btn-select">Choisir les fichiers</span>
+            <p>ou glisse-les ici</p>
+            <div id="fileCount">Aucun fichier sélectionné</div>
+        </label>
+        
+        <input type="file" id="fileInput" multiple>
+
+        <button id="downloadBtn" disabled>Télécharger le Dossier ZIP</button>
         <div id="status"></div>
     </div>
 
     <script>
-        document.getElementById('downloadBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('downloadBtn');
-            const status = document.getElementById('status');
-            const links = document.getElementById('links').value.split('\n').filter(l => l.trim() !== '');
-            
-            if (links.length === 0) return alert("Ajoute au moins un lien !");
+        const fileInput = document.getElementById('fileInput');
+        const fileCount = document.getElementById('fileCount');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const status = document.getElementById('status');
 
-            btn.disabled = true;
-            status.innerText = "Préparation du dossier...";
+        // Mettre à jour l'affichage quand on choisit des fichiers
+        fileInput.addEventListener('change', () => {
+            const count = fileInput.files.length;
+            if (count > 0) {
+                fileCount.innerText = `${count} fichier(s) prêt(s)`;
+                downloadBtn.disabled = false;
+            } else {
+                fileCount.innerText = "Aucun fichier sélectionné";
+                downloadBtn.disabled = true;
+            }
+        });
+
+        // Logique de création du ZIP
+        downloadBtn.addEventListener('click', async () => {
+            const files = fileInput.files;
+            if (files.length === 0) return;
+
+            downloadBtn.disabled = true;
+            status.style.color = "#58a6ff";
+            status.innerText = "⚡ Création du ZIP en cours...";
+
             const zip = new JSZip();
 
-            try {
-                for (let i = 0; i < links.length; i++) {
-                    const url = links[i].trim();
-                    status.innerText = `Téléchargement du fichier ${i + 1}/${links.length}...`;
-                    
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    
-                    // On extrait le nom du fichier depuis l'URL
-                    const fileName = url.split('/').pop() || `fichier_${i+1}`;
-                    zip.file(fileName, blob);
-                }
+            // Ajouter chaque fichier au ZIP
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                zip.file(file.name, file);
+            }
 
-                status.innerText = "Compression en cours...";
+            try {
+                // Générer le fichier final
                 const content = await zip.generateAsync({ type: "blob" });
                 
-                // Création du lien de téléchargement
+                // Créer le lien de téléchargement automatique
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(content);
-                link.download = "Mon_Dossier.zip";
+                link.download = "Mon_Dossier_Fichiers.zip";
                 link.click();
 
-                status.innerText = "✅ Terminé !";
+                status.style.color = "#3fb950";
+                status.innerText = "✅ Dossier téléchargé !";
             } catch (err) {
                 console.error(err);
-                status.innerText = "❌ Erreur (vérifie les liens ou les droits CORS)";
+                status.style.color = "#f85149";
+                status.innerText = "❌ Une erreur est survenue.";
+            } finally {
+                downloadBtn.disabled = false;
             }
-            btn.disabled = false;
         });
     </script>
 </body>
